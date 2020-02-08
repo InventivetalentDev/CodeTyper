@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <CodeTyper code="let test = '1';" language="javascript"  ref="typer"/>
+    <md-app>
+      <md-app-content>
+        <CodeTyper language="javascript"  ref="typer"/>
+      </md-app-content>
+    </md-app>
   </div>
 </template>
 
