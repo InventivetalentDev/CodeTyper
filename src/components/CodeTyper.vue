@@ -3,15 +3,17 @@
         <div class="md-layout">
             <div class="md-layout-item">
                 <div>
-                    <md-button v-on:click="goto(0)" :disabled="index===0" title="Go to First Frame"><i class="material-icons">fast_rewind</i></md-button>
-                    <md-button v-on:click="goto(index-1)" :disabled="index===0" title="Go to Previous Frame"><i class="material-icons">skip_previous</i></md-button>
+                    <md-button v-on:click="goto(0)" :disabled="index===0||playing" title="Go to First Frame"><i class="material-icons">fast_rewind</i></md-button>
+                    <md-button v-on:click="goto(index-1)" :disabled="index===0||playing" title="Go to Previous Frame"><i class="material-icons">skip_previous</i></md-button>
                     <md-button v-on:click="playOrPause()"><i class="material-icons" title="Play/Pause">{{ playing ? 'pause' : 'play_arrow' }}</i></md-button>
-                    <md-button v-on:click="goto(index+1)" :disabled="index>=length" title="Go to Next Frame"><i class="material-icons">skip_next</i></md-button>
-                    <md-button v-on:click="goto(length)" :disabled="index>=length" title="Go to Last Frame"><i class="material-icons">fast_forward</i></md-button>
+                    <md-button v-on:click="goto(index+1)" :disabled="index>=length||playing" title="Go to Next Frame"><i class="material-icons">skip_next</i></md-button>
+                    <md-button v-on:click="goto(length)" :disabled="index>=length||playing" title="Go to Last Frame"><i class="material-icons">fast_forward</i></md-button>
                 </div>
                 <div>
-                    {{ index }}/{{ length }}
-                    <input type="range" v-model="index" :max="length">
+<!--                    {{ index }}/{{ length }}-->
+<!--                    <input type="range" v-model="index" :max="length">-->
+<!--                    |-->
+                    <input type="number" v-model="cps" max="60000"><span title="Characters/Second">CPS</span>
                 </div>
             </div>
             <div class="md-layout-item">
@@ -19,7 +21,7 @@
             </div>
         </div>
         <div class="code-container">
-            <prism :language=language>{{ currentCode }}</prism>
+            <PrismComponent :language=language>{{ currentCode }}</PrismComponent>
         </div>
     </div>
 </template>
@@ -35,23 +37,25 @@
     import 'prismjs'
     import 'prismjs/themes/prism-tomorrow.css'
 
-    import Prism from 'vue-prism-component'
+    import PrismComponent from 'vue-prism-component'
+
 
     export default {
         name: 'CodeTyper',
         components: {
-            Prism
+            PrismComponent
         },
-        props: {
-            code: String,
-            language: String
-        },
+        props: {},
         data() {
             return {
+                code: '',
+                language: 'javascript',
                 index: 0,
                 length: 0,
                 playing: false,
-                interval: 500,
+                interval: 1000,
+                cps:1,
+                timer:null,
                 currentCode: ""
             }
         },
@@ -62,6 +66,10 @@
             },
             index() {
                 this.showCurrentCode()
+            },
+            cps(){
+                this.interval = Math.max(1, Math.round(1000/parseFloat(this.cps)));
+                window.console.log("CPS: " + this.cps + " => Interval: " + this.interval);
             }
         },
         methods: {
@@ -76,10 +84,14 @@
                 }
             },
             play() {
-
+                if(this.playing)return;
+                this.timer = setInterval(this.step, this.interval);
+                this.playing=true;
             },
             pause() {
-
+                if(!this.playing)return;
+                clearInterval(this.timer);
+                this.playing= false;
             },
             goto(i) {
                 if (i > this.length) {
@@ -107,7 +119,7 @@
                     self.code = e.target.result;
                 };
 
-                this.playing = false;
+                this.pause();
                 this.index = 0;
                 this.code = '';
 

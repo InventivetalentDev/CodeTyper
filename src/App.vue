@@ -2,7 +2,7 @@
   <div id="app">
     <md-app>
       <md-app-content>
-        <CodeTyper language="javascript"  ref="typer"/>
+        <CodeTyper  ref="typer"/>
       </md-app-content>
     </md-app>
   </div>
