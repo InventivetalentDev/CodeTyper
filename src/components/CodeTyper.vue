@@ -1,25 +1,25 @@
 <template>
     <div>
-        <div class="md-layout">
-            <div class="md-layout-item">
-                <div>
-                    <md-button v-on:click="goto(0)" :disabled="index===0||playing" title="Go to First Frame"><i class="material-icons">fast_rewind</i></md-button>
-                    <md-button v-on:click="goto(index-1)" :disabled="index===0||playing" title="Go to Previous Frame"><i class="material-icons">skip_previous</i></md-button>
-                    <md-button v-on:click="playOrPause()"><i class="material-icons" title="Play/Pause">{{ playing ? 'pause' : 'play_arrow' }}</i></md-button>
-                    <md-button v-on:click="goto(index+1)" :disabled="index>=length||playing" title="Go to Next Frame"><i class="material-icons">skip_next</i></md-button>
-                    <md-button v-on:click="goto(length)" :disabled="index>=length||playing" title="Go to Last Frame"><i class="material-icons">fast_forward</i></md-button>
-                </div>
-                <div>
-<!--                    {{ index }}/{{ length }}-->
-<!--                    <input type="range" v-model="index" :max="length">-->
-<!--                    |-->
-                    <input type="number" v-model="cps" max="60000"><span title="Characters/Second">CPS</span>
-                </div>
-            </div>
-            <div class="md-layout-item">
-                <input type="file" @change="onFileChange">
-            </div>
-        </div>
+        <!--        <div class="md-layout">-->
+        <!--            <div class="md-layout-item">-->
+        <!--                <div>-->
+        <!--                    <md-button v-on:click="goto(0)" :disabled="index===0||playing" title="Go to First Frame"><i class="material-icons">fast_rewind</i></md-button>-->
+        <!--                    <md-button v-on:click="goto(index-1)" :disabled="index===0||playing" title="Go to Previous Frame"><i class="material-icons">skip_previous</i></md-button>-->
+        <!--                    <md-button v-on:click="playOrPause()"><i class="material-icons" title="Play/Pause">{{ playing ? 'pause' : 'play_arrow' }}</i></md-button>-->
+        <!--                    <md-button v-on:click="goto(index+1)" :disabled="index>=length||playing" title="Go to Next Frame"><i class="material-icons">skip_next</i></md-button>-->
+        <!--                    <md-button v-on:click="goto(length)" :disabled="index>=length||playing" title="Go to Last Frame"><i class="material-icons">fast_forward</i></md-button>-->
+        <!--                </div>-->
+        <!--                <div>-->
+        <!--&lt;!&ndash;                    {{ index }}/{{ length }}&ndash;&gt;-->
+        <!--&lt;!&ndash;                    <input type="range" v-model="index" :max="length">&ndash;&gt;-->
+        <!--&lt;!&ndash;                    |&ndash;&gt;-->
+        <!--                    <input type="number" v-model="cps" max="60000"><span title="Characters/Second">CPS</span>-->
+        <!--                </div>-->
+        <!--            </div>-->
+        <!--            <div class="md-layout-item">-->
+        <!--                <input type="file" @change="onFileChange">-->
+        <!--            </div>-->
+        <!--        </div>-->
         <div class="code-container">
             <PrismComponent :language=language>{{ currentCode }}</PrismComponent>
         </div>
@@ -45,7 +45,9 @@
         components: {
             PrismComponent
         },
-        props: {},
+        props: {
+            mode: String
+        },
         data() {
             return {
                 code: '',
@@ -54,8 +56,8 @@
                 length: 0,
                 playing: false,
                 interval: 1000,
-                cps:1,
-                timer:null,
+                cps: 1,
+                timer: null,
                 currentCode: ""
             }
         },
@@ -63,18 +65,61 @@
             code() {
                 window.console.log("code change")
                 this.length = this.code.length;
+                this.index = 0;
             },
             index() {
                 this.showCurrentCode()
             },
-            cps(){
-                this.interval = Math.max(1, Math.round(1000/parseFloat(this.cps)));
+            length() {
+                this.notifyGlobal("length", this.length);
+            },
+            cps() {
+                this.interval = Math.max(1, Math.round(1000 / parseFloat(this.cps)));
                 window.console.log("CPS: " + this.cps + " => Interval: " + this.interval);
             }
         },
         methods: {
+            notifyGlobal(k, v) {
+                if (this.mode === "full") {
+                    this.$emit("globalSync", "typer", k, v);
+                } else {
+                    localStorage.setItem(k, v);
+                }
+            },
+            receiveGlobal(k, v) {
+                window.console.log("[Typer] receiveGlobal "+k+": "+v)
+                let self = this;
+                switch (k) {
+                    case 'length':
+                        self.length = parseInt(v);
+                        break;
+                    case 'language':
+                        self.language = v;
+                        break;
+                    case 'playing':
+                        if (v === "true"||v===true) {
+                            self.play();
+                        } else {
+                            self.pause();
+                        }
+                        break;
+                    case 'index':
+                        self.index = parseInt(v);
+                        break;
+                    case 'code':
+                        self.code = v;
+                        break;
+                    case 'interval':
+                        self.interval = parseInt(v);
+                        break;
+                }
+            },
             step() {
-                return this.goto(this.index + 1);
+                let b = this.goto(this.index + 1);
+                if (!b) {
+                    this.pause()
+                }
+                return b;
             },
             playOrPause() {
                 if (this.playing) {
@@ -84,14 +129,18 @@
                 }
             },
             play() {
-                if(this.playing)return;
+                if (this.playing) return;
                 this.timer = setInterval(this.step, this.interval);
-                this.playing=true;
+                this.playing = true;
+                this.notifyGlobal("index", this.index);
+                this.notifyGlobal("playing", true);
             },
             pause() {
-                if(!this.playing)return;
+                if (!this.playing) return;
                 clearInterval(this.timer);
-                this.playing= false;
+                this.playing = false;
+                this.notifyGlobal("index", this.index);
+                this.notifyGlobal("playing", false);
             },
             goto(i) {
                 if (i > this.length) {
@@ -105,29 +154,20 @@
             },
             showCurrentCode() {
                 this.currentCode = this.code.substring(0, this.index);
-            },
-            onFileChange(e) {
-                let files = e.target.files || e.dataTransfer.files;
-                if (!files.length)
-                    return;
-                this.handleFile(files[0]);
-            },
-            handleFile(file) {
-                let reader = new FileReader();
-                let self = this;
-                reader.onload = (e) => {
-                    self.code = e.target.result;
-                };
-
-                this.pause();
-                this.index = 0;
-                this.code = '';
-
-                reader.readAsText(file);
             }
         },
         mounted() {
-            this.length = this.code.length;
+            for (let i = 0, len = localStorage.length; i < len; ++i) {
+                this.receiveGlobal(localStorage.key(i), localStorage.getItem(localStorage.key(i)))
+            }
+            this.index=0;
+
+
+            let self = this;
+            window.addEventListener('storage', event => {
+                window.console.log("[Typer] onstorage " + event.key + ": " + event.newValue);
+                self.receiveGlobal(event.key, event.newValue);
+            });
         }
     }
 </script>
