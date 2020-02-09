@@ -1,5 +1,6 @@
 <template>
     <div>
+        <md-button v-if="mode==='full'" v-on:click="popout" style="float: right;" title="Popout"><i class="material-icons">open_in_new</i></md-button>
         <div class="md-layout">
             <div class="md-layout-item">
                 <div>
@@ -13,14 +14,18 @@
                     {{ index }}/{{ length }}
                     <!--                                        <input type="range" v-model="index" :max="length">-->
                     |
-                    <input type="number" v-model="cps" max="60000"><span title="Characters/Second">CPS</span>
+                    <md-input type="number" v-model="cps" max="60000"></md-input> <span title="Characters/Second">CPS</span>
                 </div>
             </div>
             <div class="md-layout-item">
-                <input type="file" @change="onFileChange">
+                <div>
+                    <input type="file" @change="onFileChange">
+                </div>
+                <div>
+                    <md-checkbox v-model="autoscroll">Auto-Scroll</md-checkbox>
+                </div>
             </div>
         </div>
-        <button v-if="mode==='full'" v-on:click="popout">Popout</button>
     </div>
 </template>
 
@@ -38,7 +43,8 @@
                 length: 0,
                 playing: false,
                 interval: 1000,
-                cps: 1
+                cps: 1,
+                autoscroll: true
             }
         },
         watch: {
@@ -58,6 +64,9 @@
                 this.interval = Math.max(1, Math.round(1000 / parseFloat(this.cps)));
                 window.console.log("CPS: " + this.cps + " => Interval: " + this.interval);
                 this.notifyGlobal("cps", this.cps);
+            },
+            autoscroll() {
+                this.notifyGlobal("autoscroll", this.autoscroll);
             }
         },
         methods: {
@@ -69,7 +78,7 @@
                 }
             },
             receiveGlobal(k, v) {
-                window.console.log("[Typer] receiveGlobal "+k+": "+v)
+                // window.console.log("[Typer] receiveGlobal " + k + ": " + v)
                 let self = this;
                 switch (k) {
                     case 'length':
@@ -79,7 +88,7 @@
                         self.language = v;
                         break;
                     case 'playing':
-                        self.playing = (v === "true"||v===true);
+                        self.playing = (v === "true" || v === true);
                         break;
                     case 'index':
                         self.index = parseInt(v);
@@ -152,6 +161,7 @@
             for (let i = 0, len = localStorage.length; i < len; ++i) {
                 this.receiveGlobal(localStorage.key(i), localStorage.getItem(localStorage.key(i)))
             }
+            this.playing = false;
 
             let self = this;
 

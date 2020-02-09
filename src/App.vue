@@ -28,7 +28,7 @@
 
                     let u = new URL(location.href);
                     u.hash = "controller";
-                    let win = window.open(u.toString(), 'CodeTyper_Controller', "width=900,height=170,left=150,top=200,toolbar=0,status=0");
+                    let win = window.open(u.toString(), 'CodeTyper_Controller', "width=1200,height=170,left=150,top=200,toolbar=0,status=0");
 
                     let self = this;
 

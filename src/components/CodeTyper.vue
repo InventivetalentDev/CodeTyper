@@ -20,9 +20,9 @@
         <!--                <input type="file" @change="onFileChange">-->
         <!--            </div>-->
         <!--        </div>-->
-        <div class="code-container">
+        <md-content class="code-container md-scrollbar" id="codeContainer" v-bind:style="{'height':codeHeight+'px'}">
             <PrismComponent :language=language>{{ currentCode }}</PrismComponent>
-        </div>
+        </md-content>
     </div>
 </template>
 
@@ -58,10 +58,15 @@
                 interval: 1000,
                 cps: 1,
                 timer: null,
-                currentCode: ""
+                currentCode: "",
+                autoscroll: true,
+                codeHeight: 1000
             }
         },
         watch: {
+            mode(){
+                this.applyContainerSize();
+            },
             code() {
                 window.console.log("code change")
                 this.length = this.code.length;
@@ -87,7 +92,7 @@
                 }
             },
             receiveGlobal(k, v) {
-                window.console.log("[Typer] receiveGlobal "+k+": "+v)
+                // window.console.log("[Typer] receiveGlobal "+k+": "+v)
                 let self = this;
                 switch (k) {
                     case 'length':
@@ -111,6 +116,9 @@
                         break;
                     case 'interval':
                         self.interval = parseInt(v);
+                        break;
+                    case 'autoscroll':
+                        self.autoscroll = v==="true"||v===true;
                         break;
                 }
             },
@@ -150,20 +158,43 @@
                     return false;
                 }
                 this.index = i;
+
+                if (this.autoscroll) {
+                    let el = document.getElementById("codeContainer");
+                    el.scrollTop = el.scrollHeight;
+                }
+
                 return true;
             },
             showCurrentCode() {
                 this.currentCode = this.code.substring(0, this.index);
+            },
+            applyContainerSize() {
+                let innerHeight = window.innerHeight;
+                if (this.mode === "typer") {
+                    innerHeight-=32;
+                }else if (this.mode === "full") {
+                    innerHeight-=106;
+                }
+                window.console.log(innerHeight);
+                this.codeHeight =innerHeight;
             }
         },
         mounted() {
+            let self = this;
+
             for (let i = 0, len = localStorage.length; i < len; ++i) {
                 this.receiveGlobal(localStorage.key(i), localStorage.getItem(localStorage.key(i)))
             }
             this.index=0;
+            this.pause();
+
+            this.applyContainerSize();
+            window.addEventListener("resize",()=>{
+                self.applyContainerSize();
+            });
 
 
-            let self = this;
             window.addEventListener('storage', event => {
                 window.console.log("[Typer] onstorage " + event.key + ": " + event.newValue);
                 self.receiveGlobal(event.key, event.newValue);
